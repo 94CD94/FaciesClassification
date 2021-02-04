@@ -22,8 +22,14 @@ from sklearn.decomposition import PCA
 from sklearn.externals import joblib
 from sklearn.svm import LinearSVC
 
+# This script performs a comparison between 5 machine learning algorithm an a Facies classification problem. 
+# Algorithms compared: Random Forest, Linear SVM, Logistic Regression, Neural Network, K-Nearest Neighbors. 
+
+
+# The following pipelines are in their basic form, including only the scaler in the cross validation. 
+
 # load dataset
-var = r'C:\Users\ridar\Desktop\Tesi_Carniani\X.txt'  
+var = r'C:\Users\ridar\Desktop\Tesi_Carniani\X.txt' #Data is hidden, copyright permissions
 cols=['VP','VS','RHO','Y'] 
 X=pd.read_csv(var,sep=';')
 
@@ -35,7 +41,7 @@ X=X[cols]
 #X,Xt,y,yt = model_selection.train_test_split(X[['RHO','VP','VS']],X.Y, test_size=0.2,random_state=1, shuffle=True)        
 Xt=pd.read_csv(r'C:\Users\ridar\Desktop\Tesi_Carniani\Avares.txt',sep=';')
 Xt=Xt[cols]
-Log=Xt.loc[Xt.VP < 1900 ].copy()
+Log=Xt.loc[Xt.VP < 1900 ].copy() # Removing improbable data
 Xt.drop(Log.loc[Log.Y==1].index,axis=0,inplace=True)
 Xt.RHO=Xt.RHO/1000
 y=X.Y
@@ -51,7 +57,7 @@ Xt=Xt[columns]
 n_classes=len(Counter(y))
 scorer='balanced_accuracy'
 # prepare models
-cv =model_selection.StratifiedKFold(n_splits=5,random_state=1)
+cv =model_selection.StratifiedKFold(n_splits=5,random_state=1) # Stratified-K fold allow to manage unbalanced problems
 scale=StandardScaler()
 sel=feature_selection.SelectKBest(k=20)
 kb= KBinsDiscretizer(n_bins=30, strategy='uniform',encode='onehot-dense')
@@ -63,23 +69,23 @@ estimators3 = [ ('scale',scale),('clf',MLPClassifier(random_state=1,solver='lbfg
 estimators4 = [ ('scale',scale),('clf',RandomForestClassifier(random_state=1))]
 estimators5 = [ ('scale',scale),('clf',LinearSVC(random_state=1,dual=False,max_iter=10000,fit_intercept=False,tol=10**-4,verbose=True))]
 
-pipe1  = imbPipeline(estimators1)
+pipe1  = imbPipeline(estimators1) # Use of imbPipeline makes possible the implementation of SMOTE techniques
 pipe2  = imbPipeline(estimators2)
 pipe3  = imbPipeline(estimators3)
 pipe4  = imbPipeline(estimators4)
 pipe5  = imbPipeline(estimators5)
 
-param_grid1 = dict(clf__n_neighbors=Grid.KNN()['n_neighbors'],clf__p=Grid.KNN()['p'],clf__weights=Grid.KNN()['weights'])
+param_grid1 = dict(clf__n_neighbors=Grid.KNN()['n_neighbors'],clf__p=Grid.KNN()['p'],clf__weights=Grid.KNN()['weights']) #Parameters are gathered from a user-defined class.
 param_grid2 = dict(clf__C=Grid.LR()['C'],clf__penalty=Grid.LR()['penalty'])          
 param_grid3 = dict(clf__alpha=Grid.NN()['alpha'],clf__activation=Grid.NN()['activation']) 
 param_grid4 = dict(clf__n_estimators=Grid.RF()['n_estimators'],clf__max_depth=Grid.RF()['max_depth'],clf__min_samples_split=Grid.RF()['min_samples_split'],clf__min_samples_leaf=Grid.RF()['min_samples_leaf']) 
 param_grid5 = dict(clf__C=Grid.SVM()['C'],clf__penalty=Grid.SVM()['penalty'])
    
-grid1 = model_selection.GridSearchCV(pipe1, param_grid=param_grid1,cv=cv,n_jobs=-1,verbose=1,scoring='balanced_accuracy')
-grid2 = model_selection.GridSearchCV(pipe2, param_grid=param_grid2,cv=cv,n_jobs=-1,verbose=1,scoring='balanced_accuracy')
-grid3 = model_selection.GridSearchCV(pipe3, param_grid=param_grid3,cv=cv,n_jobs=-1,verbose=1,scoring='balanced_accuracy')
-grid4 = model_selection.GridSearchCV(pipe4, param_grid=param_grid4,cv=cv,n_jobs=-1,verbose=1,scoring='balanced_accuracy')
-grid5 = model_selection.GridSearchCV(pipe5, param_grid=param_grid5,cv=cv,n_jobs=-1,verbose=1,scoring='balanced_accuracy')
+grid1 = model_selection.GridSearchCV(pipe1, param_grid=param_grid1,cv=cv,n_jobs=-1,verbose=1,scoring=scorer)
+grid2 = model_selection.GridSearchCV(pipe2, param_grid=param_grid2,cv=cv,n_jobs=-1,verbose=1,scoring=scorer)
+grid3 = model_selection.GridSearchCV(pipe3, param_grid=param_grid3,cv=cv,n_jobs=-1,verbose=1,scoring=scorer)
+grid4 = model_selection.GridSearchCV(pipe4, param_grid=param_grid4,cv=cv,n_jobs=-1,verbose=1,scoring=scorer)
+grid5 = model_selection.GridSearchCV(pipe5, param_grid=param_grid5,cv=cv,n_jobs=-1,verbose=1,scoring=scorer)
 
 models = []
 models.append(('KNN', grid1))
@@ -100,11 +106,12 @@ Yp=[]
 BestEstimator=[]
 AveRank=[]
 
+# Printing scores and stds in terminal, and saving the result of the cross-validation
 for name, model in models:
    model.fit(X,y) 
    best_p.append(name)
    best_p.append(model.best_params_)
-   cv_results= exportfromkeys(model.cv_results_, Split_values, model.best_index_)
+   cv_results= exportfromkeys(model.cv_results_, Split_values, model.best_index_) # user-defined function 
    Yp.append((name,model_selection.cross_val_predict(model.best_estimator_,X,y,cv=cv))) 
    BestEstimator.append((name,model.best_estimator_))
    results.append(cv_results)
@@ -133,12 +140,13 @@ plt.ylabel('Balanced Accuracy')
 plt.savefig("dispres.png")
 plt.show()
 
+#Saving data in text-files
 with open("Log.txt", "w") as text_file:
     print(f"Best results: {best_p}", file=text_file)
 with open("Results.txt", "w") as text_file:
     print(f"Best Scores: {AveRank}", file=text_file)
 
-#BEST ALGORITHMS AND EVALUATION
+#Best algorithm and evaluation 
 AveRank.sort(reverse=True)
 j=0
 for name, pipe in BestEstimator: 
@@ -164,7 +172,7 @@ plt.show()
 joblib_file = "Best_Model.pkl"          
 joblib.dump(BestPipe, joblib_file)
 
-
+# Classify the well 
 yp2=np.asarray(yt)
 yp2.shape=[yp2.size,1]
 yy=np.concatenate([yp2,yp2,yp2],axis=1)
