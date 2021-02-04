@@ -57,7 +57,7 @@ Xt=Xt[columns]
 n_classes=len(Counter(y))
 scorer='balanced_accuracy'
 # prepare models
-cv =model_selection.StratifiedKFold(n_splits=5,random_state=1) # Stratified-K fold allow to manage unbalanced problems
+cv =model_selection.StratifiedKFold(n_splits=5,random_state=1) # Stratified-K fold allows to manage unbalanced problems
 scale=StandardScaler()
 sel=feature_selection.SelectKBest(k=20)
 kb= KBinsDiscretizer(n_bins=30, strategy='uniform',encode='onehot-dense')
